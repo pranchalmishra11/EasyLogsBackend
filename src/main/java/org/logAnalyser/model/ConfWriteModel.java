@@ -18,6 +18,8 @@ public class ConfWriteModel implements Serializable {
 
     private List<MicroServiceConfig> microservices;
 
+    private String indexName;
+
 
 
 

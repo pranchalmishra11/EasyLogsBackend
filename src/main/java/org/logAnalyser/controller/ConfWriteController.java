@@ -1,8 +1,5 @@
 package org.logAnalyser.controller;
 
-import java.io.FileWriter;
-import java.io.IOException;
-import java.nio.file.Paths;
 
 import org.logAnalyser.model.ConfFileResponse;
 import org.logAnalyser.model.ConfWriteModel;
