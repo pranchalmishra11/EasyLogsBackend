@@ -1,5 +1,6 @@
 package org.logAnalyser.service;
 
+import lombok.Getter;
 import org.logAnalyser.model.ConfFileResponse;
 import org.logAnalyser.model.ConfWriteModel;
 import org.springframework.beans.factory.annotation.Value;
@@ -10,6 +11,7 @@ import java.io.IOException;
 import java.nio.file.Paths;
 import java.util.*;
 
+@Getter
 @Service
 public class GenerateConfigService {
 
@@ -17,10 +19,6 @@ public class GenerateConfigService {
 
     private static final List<String> AttributeSet = Arrays.asList("timestamp","log_level","pid","thread",
             "class","message");
-
-    public String getElasticSearchUrl() {
-        return elasticSearchUrl;
-    }
 
 
     @Value("${elasticSearch.cluster.url}")
