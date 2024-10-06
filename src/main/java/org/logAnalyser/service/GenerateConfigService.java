@@ -3,6 +3,7 @@ package org.logAnalyser.service;
 import lombok.Getter;
 import org.logAnalyser.model.ConfFileResponse;
 import org.logAnalyser.model.ConfWriteModel;
+import org.logAnalyser.model.MatchAttributes;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -10,6 +11,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.file.Paths;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 @Getter
 @Service
@@ -61,10 +63,43 @@ public class GenerateConfigService {
     private void addFilterConfiguration(StringBuilder currentWrittenContext, ConfWriteModel writeModel){
         currentWrittenContext.append("filter {\n")
                 .append("  grok {\n")
-                .append("    match => { \"message\" => \"%{TIMESTAMP_ISO8601:timestamp} +%{LOGLEVEL:log_level} +%{NUMBER:pid} --- \\[%{DATA:thread}\\] %{DATA:class} +: %{GREEDYDATA:message}\" }\n")
-                .append("  }\n");
+                .append("    match => { \"message\" => \"").append(generateMatchParsing(writeModel))
+                //%{TIMESTAMP_ISO8601:timestamp} +%{LOGLEVEL:log_level} +%{NUMBER:pid} --- \\[%{DATA:thread}\\] %{DATA:class} +: %{GREEDYDATA:message}\" }\n")
+                .append(" }\n").append(" }\n");
          buildMutateFeatures(currentWrittenContext,writeModel);
          currentWrittenContext.append(" }\n");
+        }
+
+
+        private StringBuilder generateMatchParsing(ConfWriteModel confWriteModel){
+            StringBuilder matchContext =  new StringBuilder();
+            List<MatchAttributes> matchAttributes = confWriteModel.getMatchAttributes();
+            matchAttributes.sort(Comparator.comparingInt(MatchAttributes::getPosition));
+
+            matchAttributes.forEach(attributeObject->{
+                if(attributeObject.getPosition()>1 && null!=attributeObject.getPreDelimiter() &&
+                        !attributeObject.getPreDelimiter().isEmpty()){
+                    String trimDelimiter = attributeObject.getPreDelimiter().trim();
+                    if(trimDelimiter.isEmpty()){
+                            matchContext.append("%{SPACE}+");
+                        }
+                    else{
+                        matchContext.append("%{SPACE}*").append(trimDelimiter).append("%{SPACE}*");
+                    }
+                }
+                if(null!=attributeObject.getPrefix()){
+
+                    matchContext.append(transformSpecialCharacters(attributeObject.getPrefix()));
+                }
+                matchContext.append("%{").append(attributeObject.getType()).append(":").
+                        append(attributeObject.getField()).append("}");
+                if(null!=attributeObject.getSuffix()){
+                    matchContext.append(transformSpecialCharacters(attributeObject.getSuffix()));
+                }
+            });
+            matchContext.append("\"");
+
+            return matchContext;
         }
 
         private void buildMutateFeatures(StringBuilder currentWrittenContext,ConfWriteModel writeModel){
@@ -97,6 +132,23 @@ public class GenerateConfigService {
                     .append("}\n");
 
         }
+
+    private String transformSpecialCharacters(String input) {
+        if (input == null || input.isEmpty()) {
+            return input; // Return as is if the input is null or empty
+        }
+
+        StringBuilder result = new StringBuilder();
+        for (char ch : input.toCharArray()) {
+            // If the character is a special character, append a backslash before it
+            if (!Character.isLetterOrDigit(ch)) {
+                result.append('\\');  // Append backslash before the special character
+            }
+            result.append(ch);  // Append the character itself
+        }
+
+        return result.toString();
+    }
 
 
 }

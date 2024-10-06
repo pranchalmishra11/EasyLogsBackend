@@ -20,6 +20,8 @@ public class ConfWriteModel implements Serializable {
 
     private String indexName;
 
+    private List<MatchAttributes> matchAttributes;
+
 
 
 
