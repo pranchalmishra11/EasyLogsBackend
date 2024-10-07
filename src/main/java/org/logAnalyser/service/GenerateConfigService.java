@@ -11,16 +11,16 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.file.Paths;
 import java.util.*;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 @Getter
 @Service
 public class GenerateConfigService {
 
-    private static final String logstashConfigDir = "C:/EasyLogAnalyser/output"; // Path to Logstash config directory
-
     private static final List<String> AttributeSet = Arrays.asList("timestamp","log_level","pid","thread",
             "class","message");
+
+    @Value("${configFile.outputDir}")
+    private String configFileOutputDir;
 
 
     @Value("${elasticSearch.cluster.url}")
@@ -33,7 +33,7 @@ public class GenerateConfigService {
         addFilterConfiguration(configBuilder,writeModel);
         buildOutputConfiguration(configBuilder,writeModel);
         // Write the configuration file to the specified directory
-        String configFilePath = Paths.get(logstashConfigDir,"logstashSample.conf").toString();
+        String configFilePath = Paths.get(getConfigFileOutputDir(),"logstashSample.conf").toString();
         try (FileWriter fileWriter = new FileWriter(configFilePath)) {
             fileWriter.write(configBuilder.toString());
         } catch (IOException e) {
