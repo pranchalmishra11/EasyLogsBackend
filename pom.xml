@@ -72,6 +72,19 @@
             <scope>test</scope>
         </dependency>
 
+        <dependency>
+            <groupId>co.elastic.clients</groupId>
+            <artifactId>elasticsearch-java</artifactId>
+            <version>8.15.0</version>
+        </dependency>
+
+        <!-- For HTTP communication with the cluster -->
+        <dependency>
+            <groupId>org.apache.httpcomponents.client5</groupId>
+            <artifactId>httpclient5</artifactId>
+            <version>5.2.1</version>
+        </dependency>
+
     </dependencies>
 
     <build>
