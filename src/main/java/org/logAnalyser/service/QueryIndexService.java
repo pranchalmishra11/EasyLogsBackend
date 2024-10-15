@@ -4,6 +4,7 @@ package org.logAnalyser.service;
 import co.elastic.clients.elasticsearch.ElasticsearchClient;
 import co.elastic.clients.elasticsearch._types.query_dsl.BoolQuery;
 import co.elastic.clients.elasticsearch.core.SearchResponse;
+import co.elastic.clients.elasticsearch.core.search.Hit;
 import org.logAnalyser.model.QueryRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -11,7 +12,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 @Service
 public class QueryIndexService {
@@ -27,15 +27,12 @@ public class QueryIndexService {
     public List<String> fetchResolvedData(QueryRequest queryRequest){
         String indexName = queryRequest.getIndexName();
         List<Map<String,String>> filterByList = queryRequest.getFilterBy();
+        List<String> resultList = new ArrayList<>();
         try {
-            // Build the boolean query to handle multiple filters
             BoolQuery.Builder boolQuery = new BoolQuery.Builder();
-
-            // Iterate over the filterBy array and build a must clause for each filter
             for (Map<String, String> filter : filterByList) {
                 String fieldName = filter.get("fieldName");
                 String value = filter.get("value");
-
                 if (fieldName != null && value != null) {
                     boolQuery.must(m -> m
                             .match(t -> t
@@ -43,20 +40,23 @@ public class QueryIndexService {
                                     .query(value)));
                 }
             }
-
-            // Execute the search request
             SearchResponse<Map> response = elasticsearchClientConfig.search(s -> s
                             .index(indexName)
                             .query(q -> q.bool(boolQuery.build()))
                             .size(1000),  // Adjust size if you expect more results
                     Map.class);
 
-            // Collect log messages from the search hits
-            List<String> logs = response.hits().hits().stream()
-                    .map(hit -> hit.source().get("logMessage").toString()) // Assuming logs are stored in "logMessage" field
-                    .collect(Collectors.toList());
-
-            return logs;
+            for (Hit<Map> hit : response.hits().hits()) {
+                Map<String, Object> source = hit.source();
+                if (source != null) {
+                    if (source.containsKey("event") && ((Map<String, Object>) source.get("event")).containsKey("original")) {
+                        Map<String, Object> event = (Map<String, Object>) source.get("event");
+                        String originalLog = (String) event.get("original");
+                        resultList.add(originalLog);
+                    }
+                }
+            }
+            return resultList;
 
         } catch (IOException e) {
             return new ArrayList<String>();

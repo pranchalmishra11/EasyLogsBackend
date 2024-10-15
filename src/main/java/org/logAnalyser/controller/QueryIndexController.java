@@ -26,11 +26,7 @@ public class QueryIndexController {
     @PostMapping("/search")
     public ResponseEntity<List<String>> search(@RequestBody QueryRequest queryRequest){
         List<String> response = queryIndexService.fetchResolvedData(queryRequest);
-        if(!response.isEmpty()) {
-            return new ResponseEntity<>(response, HttpStatus.OK);
-        }
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
-
+        return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
 }
