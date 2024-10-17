@@ -1,15 +1,10 @@
 package org.logAnalyser.service;
 
 import lombok.Getter;
-import org.logAnalyser.model.ConfFileResponse;
 import org.logAnalyser.model.ConfWriteModel;
 import org.logAnalyser.model.MatchAttributes;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-
-import java.io.FileWriter;
-import java.io.IOException;
-import java.nio.file.Paths;
 import java.util.*;
 
 @Getter
@@ -19,30 +14,23 @@ public class GenerateConfigService {
     private static final List<String> AttributeSet = Arrays.asList("timestamp","log_level","pid","thread",
             "class","message");
 
-    @Value("${configFile.outputDir}")
-    private String configFileOutputDir;
 
 
     @Value("${elasticSearch.cluster.url}")
     private String elasticSearchUrl;
 
-    public ConfFileResponse writeConfigFile(ConfWriteModel writeModel){
+    @Value("${elasticSearch.cluster.userName}")
+    private String userName;
+
+    @Value("${elasticSearch.cluster.password}")
+    private String password;
+
+    public String writeConfigString(ConfWriteModel writeModel){
         StringBuilder configBuilder = new StringBuilder();
-        ConfFileResponse fileResponse =  new ConfFileResponse();
         buildInputConfiguration(configBuilder,writeModel);
         addFilterConfiguration(configBuilder,writeModel);
         buildOutputConfiguration(configBuilder,writeModel);
-        // Write the configuration file to the specified directory
-        String configFilePath = Paths.get(getConfigFileOutputDir(),"logstashSample.conf").toString();
-        try (FileWriter fileWriter = new FileWriter(configFilePath)) {
-            fileWriter.write(configBuilder.toString());
-        } catch (IOException e) {
-            fileResponse.setGeneratedFilePath(null);
-            fileResponse.setMessage("Failure");
-        }
-        fileResponse.setGeneratedFilePath(configFilePath);
-        fileResponse.setMessage("Success");
-        return fileResponse;
+        return configBuilder.toString();
 
     }
 
@@ -128,6 +116,8 @@ public class GenerateConfigService {
                     .append("  elasticsearch {\n")
                     .append("    hosts => [\"").append(getElasticSearchUrl()).append("\"]\n")
                     .append("    index => \"").append(writeModel.getIndexName()).append("\"\n")
+                    .append("    user => \"").append(getUserName()).append("\"\n")
+                    .append("    password => \"").append(getPassword()).append("\"\n")
                     .append("  }\n")
                     .append("}\n");
 

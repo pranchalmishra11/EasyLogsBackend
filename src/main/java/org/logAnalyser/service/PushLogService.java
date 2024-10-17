@@ -1,59 +1,70 @@
 package org.logAnalyser.service;
 
 
+import com.google.gson.JsonObject;
+import org.logAnalyser.model.ConfWriteModel;
+import org.elasticsearch.client.Response;
+import org.logAnalyser.util.LogIngestPipelineManager;
 import org.slf4j.Logger;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.slf4j.LoggerFactory;
-import java.io.BufferedReader;
+
 import java.io.IOException;
-
-import java.io.InputStreamReader;
-
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
+import java.net.URISyntaxException;
 
 @Service
 public class PushLogService {
 
-    @Value("${logstash.dir.path}")
-    private String logstashDirPath;
-
-    @Value("${logstash.conf.file.path}")
-    private String configPath;
-
     private static final Logger logger = LoggerFactory.getLogger(PushLogService.class);
-    private Process logstashProcess;
 
-    public int runLogStashProcess(){
-        if (logstashProcess != null && logstashProcess.isAlive()) {
-            logger.info("Logstash is already running.");
-            return 1;
-        }
-        String logstashCommand = logstashDirPath + " -f " + configPath;
-        try {
-            ProcessBuilder processBuilder = new ProcessBuilder(logstashCommand.split(" "));
-            processBuilder.redirectErrorStream(true);
-            logstashProcess = processBuilder.start();
-            // Capture Logstash output in a separate thread
-            Executors.newSingleThreadExecutor().submit(() -> {
-                try (BufferedReader reader = new BufferedReader(new InputStreamReader(logstashProcess.getInputStream()))) {
-                    String line;
-                    while ((line = reader.readLine()) != null) {
-                        logger.info(line);
-                    }
-                } catch (IOException e) {
-                    logger.error("Error reading Logstash process output", e);
-                }
-            });
-            logger.info("Logstash process started with config file: {}", configPath);
+    @Value("${queue.type}")
+    private String queueType;
+
+    @Autowired
+    GenerateConfigService generateConfigService;
+
+
+    public int runLogStashProcess(ConfWriteModel writeModel) throws IOException, URISyntaxException {
+        JsonObject pipelineBody = createRequestBody(writeModel);
+        LogIngestPipelineManager pipelineManager =  new LogIngestPipelineManager();
+        Response response = pipelineManager.createOrUpdatePipeline(writeModel.getPipelineId(), pipelineBody);
+        int statusCode = response.getStatusLine().getStatusCode();
+        if(statusCode==201 || statusCode==200){
             return 0;
-
-
-        }catch (IOException e) {
-            logger.error("Error starting Logstash", e);
-            return 2;
         }
+        return 1;
+    }
+
+    private JsonObject createRequestBody(ConfWriteModel confWriteModel){
+        JsonObject pipelineBody = new JsonObject();
+        pipelineBody.addProperty("description", confWriteModel.getDescription());
+        pipelineBody.addProperty("last_modified", confWriteModel.getLast_modified().toString());
+        JsonObject metadata = new JsonObject();
+        metadata.addProperty("type", "logstash_pipeline");
+        metadata.addProperty("version", "1");
+        pipelineBody.add("pipeline_metadata", metadata);
+        pipelineBody.addProperty("username", confWriteModel.getPipelineOwner());
+        pipelineBody.addProperty("pipeline", generateConfigService.writeConfigString(confWriteModel));
+        JsonObject settings = new JsonObject();
+        settings.addProperty("pipeline.workers", confWriteModel.getWorkers());
+        settings.addProperty("pipeline.batch.size", confWriteModel.getBatchSize());
+        settings.addProperty("pipeline.batch.delay", confWriteModel.getBatchDelay());
+        settings.addProperty("queue.type", queueType);
+        pipelineBody.add("pipeline_settings", settings);
+        return pipelineBody;
+    }
+
+    public int haltLogIngestion(String pipelineId) throws URISyntaxException, IOException {
+        LogIngestPipelineManager pipelineManager =  new LogIngestPipelineManager();
+        Response response = pipelineManager.deletePipeline(pipelineId);
+        if(response.getStatusLine().getStatusCode()==200){
+            return 0;
+        }
+
+        return 1;
+
     }
 
 }

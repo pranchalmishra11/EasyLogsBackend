@@ -18,20 +18,26 @@ import java.net.URISyntaxException;
 import java.io.IOException;
 
 @Configuration
-
 public class ElasticsearchClientConfig {
 
     @Value("${elasticSearch.cluster.url}")
-    private String elasticSearchUrl;
+    private static String elasticSearchUrl;
 
     @Value("${elasticSearch.cluster.userName}")
-    private String userName;
+    private static String userName;
 
     @Value("${elasticSearch.cluster.password}")
-    private String password;
+    private static String password;
 
     @Bean
     public ElasticsearchClient elasticsearchClient() throws IOException, URISyntaxException {
+       RestClient restClient = buildRestClient();
+       RestClientTransport transport = new RestClientTransport(restClient, new JacksonJsonpMapper());
+        return new ElasticsearchClient(transport);
+    }
+
+
+    public static RestClient buildRestClient() throws URISyntaxException{
         URI uri = new URI(elasticSearchUrl);
         BasicCredentialsProvider credentialsProvider = new BasicCredentialsProvider();
         credentialsProvider.setCredentials(AuthScope.ANY, new UsernamePasswordCredentials(userName, password));
@@ -43,8 +49,6 @@ public class ElasticsearchClientConfig {
                         return httpClientBuilder.setDefaultCredentialsProvider(credentialsProvider);
                     }
                 });
-        RestClient restClient = builder.build();
-        RestClientTransport transport = new RestClientTransport(restClient, new JacksonJsonpMapper());
-        return new ElasticsearchClient(transport);
+        return builder.build();
     }
 }
