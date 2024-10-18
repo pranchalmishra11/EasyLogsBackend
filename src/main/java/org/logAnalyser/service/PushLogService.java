@@ -4,7 +4,6 @@ package org.logAnalyser.service;
 import com.google.gson.JsonObject;
 import org.logAnalyser.model.ConfWriteModel;
 import org.elasticsearch.client.Response;
-import org.logAnalyser.util.LogIngestPipelineManager;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -25,10 +24,12 @@ public class PushLogService {
     @Autowired
     GenerateConfigService generateConfigService;
 
+    @Autowired
+    LogIngestPipelineManager pipelineManager;
+
 
     public int runLogStashProcess(ConfWriteModel writeModel) throws IOException, URISyntaxException {
         JsonObject pipelineBody = createRequestBody(writeModel);
-        LogIngestPipelineManager pipelineManager =  new LogIngestPipelineManager();
         Response response = pipelineManager.createOrUpdatePipeline(writeModel.getPipelineId(), pipelineBody);
         int statusCode = response.getStatusLine().getStatusCode();
         if(statusCode==201 || statusCode==200){
@@ -57,7 +58,6 @@ public class PushLogService {
     }
 
     public int haltLogIngestion(String pipelineId) throws URISyntaxException, IOException {
-        LogIngestPipelineManager pipelineManager =  new LogIngestPipelineManager();
         Response response = pipelineManager.deletePipeline(pipelineId);
         if(response.getStatusLine().getStatusCode()==200){
             return 0;

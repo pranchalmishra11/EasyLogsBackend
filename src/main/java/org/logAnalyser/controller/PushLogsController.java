@@ -31,14 +31,14 @@ public class PushLogsController {
         }
     }
 
-    @PostMapping("/stop")
+    @PostMapping("/stop/{pipelineId}")
     public ResponseEntity<String> stopLogstashPipeline(@PathVariable String pipelineId) throws URISyntaxException,IOException{
         int returnCode = pushLogService.haltLogIngestion(pipelineId);
         if (returnCode == 0) {
-            return ResponseEntity.ok("Logstash pipeline started successfully");
+            return ResponseEntity.ok("Logstash pipeline stopped successfully");
         }
         else{
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Failed to start Logstash pipeline");
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Failed to stop Logstash pipeline");
 
         }
     }

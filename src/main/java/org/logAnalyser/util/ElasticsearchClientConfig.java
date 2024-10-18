@@ -13,6 +13,8 @@ import org.elasticsearch.client.RestClientBuilder;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.stereotype.Service;
+
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.io.IOException;
@@ -21,13 +23,13 @@ import java.io.IOException;
 public class ElasticsearchClientConfig {
 
     @Value("${elasticSearch.cluster.url}")
-    private static String elasticSearchUrl;
+    private String elasticSearchUrl;
 
     @Value("${elasticSearch.cluster.userName}")
-    private static String userName;
+    private String userName;
 
     @Value("${elasticSearch.cluster.password}")
-    private static String password;
+    private String password;
 
     @Bean
     public ElasticsearchClient elasticsearchClient() throws IOException, URISyntaxException {
@@ -37,7 +39,12 @@ public class ElasticsearchClientConfig {
     }
 
 
-    public static RestClient buildRestClient() throws URISyntaxException{
+    @Bean
+    public RestClient restClient() throws URISyntaxException {
+        return buildRestClient();
+    }
+
+    public RestClient buildRestClient() throws URISyntaxException{
         URI uri = new URI(elasticSearchUrl);
         BasicCredentialsProvider credentialsProvider = new BasicCredentialsProvider();
         credentialsProvider.setCredentials(AuthScope.ANY, new UsernamePasswordCredentials(userName, password));

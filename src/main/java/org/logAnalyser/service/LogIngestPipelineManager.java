@@ -1,19 +1,25 @@
-package org.logAnalyser.util;
+package org.logAnalyser.service;
 
 import com.google.gson.JsonObject;
 import org.elasticsearch.client.Request;
 import org.elasticsearch.client.Response;
 import org.elasticsearch.client.RestClient;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
 
 import java.io.IOException;
 import java.net.URISyntaxException;
 
+
+@Service
 public class LogIngestPipelineManager {
 
     private final RestClient restClient;
 
-    public LogIngestPipelineManager() throws URISyntaxException {
-        this.restClient = ElasticsearchClientConfig.buildRestClient();
+
+    @Autowired
+    public LogIngestPipelineManager(RestClient clientConfig) throws URISyntaxException {
+        this.restClient = clientConfig;
     }
     public Response createOrUpdatePipeline(String pipelineId, JsonObject pipelineConfig) throws IOException {
         String endpoint = "/_logstash/pipeline/" + pipelineId;
