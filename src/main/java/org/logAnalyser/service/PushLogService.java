@@ -1,17 +1,26 @@
 package org.logAnalyser.service;
 
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.gson.JsonObject;
+import com.google.gson.JsonParseException;
+import com.google.gson.JsonParser;
+import jakarta.json.Json;
 import org.logAnalyser.model.ConfWriteModel;
 import org.elasticsearch.client.Response;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.slf4j.LoggerFactory;
+import org.springframework.web.client.RestTemplate;
 
 import java.io.IOException;
 import java.net.URISyntaxException;
+import java.util.Objects;
 
 @Service
 public class PushLogService {
@@ -20,6 +29,9 @@ public class PushLogService {
 
     @Value("${queue.type}")
     private String queueType;
+
+    @Value("${logStash.url}")
+    private String logstashUrl;
 
     @Autowired
     GenerateConfigService generateConfigService;
@@ -62,9 +74,40 @@ public class PushLogService {
         if(response.getStatusLine().getStatusCode()==200){
             return 0;
         }
-
         return 1;
 
+    }
+
+    public int getIngestionStatus(String pipelineId){
+        JsonObject eventsObject =  callLogStash(pipelineId);
+        if(!eventsObject.entrySet().isEmpty()) {
+            long eventsIn = eventsObject.get("in").getAsLong();
+            long eventsOut = eventsObject.get("out").getAsLong();
+            long eventsFiltered = eventsObject.get("filtered").getAsLong();
+            if (eventsIn > 0 && (eventsOut > 0 || eventsFiltered > 0)) {
+                return 0;
+            } else {
+                return 1;
+            }
+        }
+        return 2;
+    }
+
+    private JsonObject callLogStash(String pipelineId){
+        RestTemplate restTemplate = new RestTemplate();
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        HttpEntity<String> entity = new HttpEntity<>(headers);
+        ResponseEntity<String> response = restTemplate.exchange(logstashUrl+pipelineId+"?pretty", HttpMethod.GET, entity, String.class);
+        int code = response.getStatusCode().value();
+        if(code==200){
+                JsonObject resultObject = JsonParser.parseString(Objects.requireNonNull(response.getBody())).
+                        getAsJsonObject();
+                JsonObject pipelinesObject = resultObject.getAsJsonObject("pipelines");
+                JsonObject pipelineObject = pipelinesObject.getAsJsonObject(pipelineId);
+                return pipelineObject.getAsJsonObject("events");
+            }
+       return new JsonObject();
     }
 
 }

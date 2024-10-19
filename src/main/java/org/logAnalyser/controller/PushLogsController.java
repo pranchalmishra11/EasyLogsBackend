@@ -11,6 +11,8 @@ import org.springframework.web.bind.annotation.*;
 
 import java.io.IOException;
 import java.net.URISyntaxException;
+import java.util.HashMap;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/logPush")
@@ -42,4 +44,21 @@ public class PushLogsController {
 
         }
     }
+
+
+    @GetMapping("/status/{pipelineId}")
+    public ResponseEntity<Map<String, Object>> getPipelineStatus(@PathVariable String pipelineId){
+        Map<String, Object> responseMap = new HashMap<>();
+        int response = pushLogService.getIngestionStatus(pipelineId);
+        if (response==0)
+        {
+            responseMap.put("status", "Pipeline is actively processing logs.");
+        } else if(response==1)
+        {
+            responseMap.put("status", "Pipeline is not processing any logs currently.");
+        }
+        responseMap.put("status","cannot retrieve pipeline status");
+        return new ResponseEntity<>(responseMap, HttpStatus.OK);
+    }
 }
+
