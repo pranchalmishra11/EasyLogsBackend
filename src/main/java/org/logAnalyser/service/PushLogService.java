@@ -1,21 +1,17 @@
 package org.logAnalyser.service;
 
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.gson.JsonObject;
-import com.google.gson.JsonParseException;
 import com.google.gson.JsonParser;
-import jakarta.json.Json;
-import org.logAnalyser.model.ConfWriteModel;
 import org.elasticsearch.client.Response;
+import org.logAnalyser.model.ConfWriteModel;
 import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
-import org.slf4j.LoggerFactory;
+import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 
 import java.io.IOException;
@@ -69,7 +65,7 @@ public class PushLogService {
         return pipelineBody;
     }
 
-    public int haltLogIngestion(String pipelineId) throws URISyntaxException, IOException {
+    public int haltLogIngestion(String pipelineId) throws IOException {
         Response response = pipelineManager.deletePipeline(pipelineId);
         if(response.getStatusLine().getStatusCode()==200){
             return 0;
@@ -98,6 +94,7 @@ public class PushLogService {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         HttpEntity<String> entity = new HttpEntity<>(headers);
+        try{
         ResponseEntity<String> response = restTemplate.exchange(logstashUrl+pipelineId+"?pretty", HttpMethod.GET, entity, String.class);
         int code = response.getStatusCode().value();
         if(code==200){
@@ -107,6 +104,9 @@ public class PushLogService {
                 JsonObject pipelineObject = pipelinesObject.getAsJsonObject(pipelineId);
                 return pipelineObject.getAsJsonObject("events");
             }
+        }catch(RestClientException restClientException){
+            return new JsonObject();
+        }
        return new JsonObject();
     }
 

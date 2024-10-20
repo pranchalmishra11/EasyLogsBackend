@@ -31,9 +31,6 @@ public class QueryIndexController {
     @PostMapping("/error-stats")
     public ResponseEntity<Map<String, Object>> getErrorStats(@Valid @RequestBody ErrorStatsRequest errorStatsRequest){
             Map<String, Object> response = queryIndexService.fetchErrorStats(errorStatsRequest);
-            if(response.containsKey("error")){
-                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
-            }
             return ResponseEntity.status(HttpStatus.OK).body(response);
 
     }

@@ -101,15 +101,15 @@ public class QueryIndexService {
 
     private long countTotalLogs(String microserviceName, String indexName) throws IOException {
         SearchRequest request = SearchRequest.of(s -> s.index(indexName).query(q -> q.term(t -> t
-                                .field("microserviceName")
+                                .field("microservice.keyword")
                                 .value(microserviceName))));
         SearchResponse<JsonData> response = elasticsearchClientConfig.search(request, JsonData.class);
         return response.hits().total().value();
     }
     private long countErrorLogs(String microserviceName, String indexName) throws IOException {
         SearchRequest request = SearchRequest.of(s -> s.index(indexName).query(q -> q.bool(b -> b
-                                .must(m -> m.term(t -> t.field("microserviceName").value(microserviceName)
-                                        )).must(m -> m.term(t -> t.field("log_level").value("ERROR"))))));
+                                .must(m -> m.term(t -> t.field("microservice.keyword").value(microserviceName)
+                                        )).must(m -> m.term(t -> t.field("log_level.keyword").value("ERROR"))))));
         SearchResponse<JsonData> response = elasticsearchClientConfig.search(request, JsonData.class);
         return response.hits().total().value();
     }

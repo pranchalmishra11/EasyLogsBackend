@@ -53,11 +53,15 @@ public class PushLogsController {
         if (response==0)
         {
             responseMap.put("status", "Pipeline is actively processing logs.");
-        } else if(response==1)
+        }
+        else if(response==1)
         {
             responseMap.put("status", "Pipeline is not processing any logs currently.");
         }
-        responseMap.put("status","cannot retrieve pipeline status");
+        else
+        {
+            responseMap.put("status","cannot retrieve pipeline status");
+        }
         return new ResponseEntity<>(responseMap, HttpStatus.OK);
     }
 }
