@@ -33,7 +33,7 @@ public class PushLogsController {
         }
     }
 
-    @PostMapping("/stop/{pipelineId}")
+    @GetMapping("/stop/{pipelineId}")
     public ResponseEntity<String> stopLogstashPipeline(@PathVariable String pipelineId) throws URISyntaxException,IOException{
         int returnCode = pushLogService.haltLogIngestion(pipelineId);
         if (returnCode == 0) {
