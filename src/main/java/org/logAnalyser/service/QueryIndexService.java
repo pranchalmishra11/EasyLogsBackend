@@ -38,9 +38,8 @@ public class QueryIndexService {
                 String value = filter.get("value");
                 if (fieldName != null && value != null) {
                     boolQuery.must(m -> m
-                            .match(t -> t
-                                    .field(fieldName)
-                                    .query(value)));
+                            .term(t -> t
+                                    .field(fieldName+".keyword").value(value)));
                 }
             }
             SearchResponse<Map> response = elasticsearchClientConfig.search(s -> s
@@ -109,7 +108,7 @@ public class QueryIndexService {
     private long countErrorLogs(String microserviceName, String indexName) throws IOException {
         SearchRequest request = SearchRequest.of(s -> s.index(indexName).query(q -> q.bool(b -> b
                                 .must(m -> m.term(t -> t.field("microservice.keyword").value(microserviceName)
-                                        )).must(m -> m.term(t -> t.field("log_level.keyword").value("ERROR"))))));
+                                        )).must(m -> m.term(t -> t.field("log_level.keyword").value("INFO"))))));
         SearchResponse<JsonData> response = elasticsearchClientConfig.search(request, JsonData.class);
         return response.hits().total().value();
     }

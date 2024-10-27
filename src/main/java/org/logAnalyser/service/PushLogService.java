@@ -4,6 +4,7 @@ package org.logAnalyser.service;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import org.elasticsearch.client.Response;
+import org.elasticsearch.client.ResponseException;
 import org.logAnalyser.model.ConfWriteModel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -49,7 +50,7 @@ public class PushLogService {
     private JsonObject createRequestBody(ConfWriteModel confWriteModel){
         JsonObject pipelineBody = new JsonObject();
         pipelineBody.addProperty("description", confWriteModel.getDescription());
-        pipelineBody.addProperty("last_modified", confWriteModel.getLast_modified().toString());
+        pipelineBody.addProperty("last_modified", confWriteModel.getLast_modified());
         JsonObject metadata = new JsonObject();
         metadata.addProperty("type", "logstash_pipeline");
         metadata.addProperty("version", "1");
@@ -66,9 +67,13 @@ public class PushLogService {
     }
 
     public int haltLogIngestion(String pipelineId) throws IOException {
-        Response response = pipelineManager.deletePipeline(pipelineId);
-        if(response.getStatusLine().getStatusCode()==200){
-            return 0;
+        try {
+            Response response = pipelineManager.deletePipeline(pipelineId);
+            if (response.getStatusLine().getStatusCode() == 200) {
+                return 0;
+            }
+        }catch (ResponseException re){
+            return 2;
         }
         return 1;
 
@@ -102,7 +107,11 @@ public class PushLogService {
                         getAsJsonObject();
                 JsonObject pipelinesObject = resultObject.getAsJsonObject("pipelines");
                 JsonObject pipelineObject = pipelinesObject.getAsJsonObject(pipelineId);
-                return pipelineObject.getAsJsonObject("events");
+                if(pipelineObject.get("events").isJsonObject()) {
+                    return pipelineObject.getAsJsonObject("events");
+                }else{
+                    return new JsonObject();
+                }
             }
         }catch(RestClientException restClientException){
             return new JsonObject();

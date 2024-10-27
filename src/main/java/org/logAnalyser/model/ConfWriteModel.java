@@ -45,7 +45,7 @@ public class ConfWriteModel implements Serializable {
     private List<MatchAttributes> matchAttributes;
 
     @NotNull
-    private ZonedDateTime last_modified;
+    private String last_modified;
 
     @NotNull
     private Integer workers;

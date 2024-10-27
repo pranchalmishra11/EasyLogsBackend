@@ -22,26 +22,35 @@ public class PushLogsController {
     PushLogService pushLogService;
 
     @PostMapping("/start")
-    public ResponseEntity<String> startLogstashPipeline(@Valid @RequestBody ConfWriteModel writeModel) throws IOException, URISyntaxException {
+    public ResponseEntity<Map<String, Object>> startLogstashPipeline(@Valid @RequestBody ConfWriteModel writeModel) throws IOException, URISyntaxException {
+        Map<String, Object> responseMap = new HashMap<>();
         int returnCode = pushLogService.runLogStashProcess(writeModel);
         if (returnCode == 0) {
-            return ResponseEntity.ok("Logstash pipeline started successfully");
+            responseMap.put("status","Logstash pipeline started successfully");
+            return new ResponseEntity<>(responseMap, HttpStatus.OK);
         }
         else{
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Failed to start Logstash pipeline");
+            responseMap.put("status","Failed to start Logstash pipeline");
+            return new ResponseEntity<>(responseMap, HttpStatus.INTERNAL_SERVER_ERROR);
 
         }
     }
 
     @GetMapping("/stop/{pipelineId}")
-    public ResponseEntity<String> stopLogstashPipeline(@PathVariable String pipelineId) throws URISyntaxException,IOException{
+    public ResponseEntity<Map<String, Object>> stopLogstashPipeline(@PathVariable String pipelineId) throws URISyntaxException,IOException{
+        Map<String, Object> responseMap = new HashMap<>();
         int returnCode = pushLogService.haltLogIngestion(pipelineId);
         if (returnCode == 0) {
-            return ResponseEntity.ok("Logstash pipeline stopped successfully");
+            responseMap.put("status","Logstash pipeline stopped successfully");
+            return new ResponseEntity<>(responseMap, HttpStatus.OK);
+        }
+        else if(returnCode==2){
+            responseMap.put("status","Logstash pipeline not found");
+            return new ResponseEntity<>(responseMap, HttpStatus.OK);
         }
         else{
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Failed to stop Logstash pipeline");
-
+            responseMap.put("status","Failed to stop Logstash pipeline");
+            return new ResponseEntity<>(responseMap, HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
@@ -60,7 +69,7 @@ public class PushLogsController {
         }
         else
         {
-            responseMap.put("status","cannot retrieve pipeline status");
+            responseMap.put("status","pipeline is terminated");
         }
         return new ResponseEntity<>(responseMap, HttpStatus.OK);
     }
