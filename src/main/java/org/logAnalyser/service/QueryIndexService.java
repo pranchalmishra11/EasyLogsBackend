@@ -3,6 +3,7 @@ package org.logAnalyser.service;
 
 import co.elastic.clients.elasticsearch.ElasticsearchClient;
 import co.elastic.clients.elasticsearch._types.ElasticsearchException;
+import co.elastic.clients.elasticsearch._types.SortOrder;
 import co.elastic.clients.elasticsearch._types.query_dsl.BoolQuery;
 import co.elastic.clients.elasticsearch.core.SearchRequest;
 import co.elastic.clients.elasticsearch.core.SearchResponse;
@@ -37,15 +38,29 @@ public class QueryIndexService {
                 String fieldName = filter.get("fieldName");
                 String value = filter.get("value");
                 if (fieldName != null && value != null) {
-                    boolQuery.must(m -> m
-                            .term(t -> t
-                                    .field(fieldName+".keyword").value(value)));
+                    if ("timestamp_range".equals(fieldName)) {
+                        // Parse the range value
+                        String[] timestamps = value.split("\\|");
+                            String fromTimestamp = timestamps[0].trim();
+                            String toTimestamp = timestamps[1].trim();
+                            // Add range query for timestamp field
+                        boolQuery.must(m -> m
+                                .range(r -> r.term(t->t.field("timestamp").gte((fromTimestamp))
+                                        .lte((toTimestamp)))));
+                    }else {
+                        boolQuery.must(m -> m
+                                .term(t -> t
+                                        .field(fieldName + ".keyword").value(value)));
+                    }
                 }
             }
             SearchResponse<Map> response = elasticsearchClientConfig.search(s -> s
                             .index(indexName)
                             .query(q -> q.bool(boolQuery.build()))
-                            .size(1000),  // Adjust size if you expect more results
+                            .sort(sort -> sort.field(f -> f
+                                    .field("timestamp")
+                                    .order(SortOrder.Asc)))
+                            .size(1000),
                     Map.class);
 
             for (Hit<Map> hit : response.hits().hits()) {
@@ -108,7 +123,7 @@ public class QueryIndexService {
     private long countErrorLogs(String microserviceName, String indexName) throws IOException {
         SearchRequest request = SearchRequest.of(s -> s.index(indexName).query(q -> q.bool(b -> b
                                 .must(m -> m.term(t -> t.field("microservice.keyword").value(microserviceName)
-                                        )).must(m -> m.term(t -> t.field("log_level.keyword").value("INFO"))))));
+                                        )).must(m -> m.term(t -> t.field("log_level.keyword").value("ERROR"))))));
         SearchResponse<JsonData> response = elasticsearchClientConfig.search(request, JsonData.class);
         return response.hits().total().value();
     }

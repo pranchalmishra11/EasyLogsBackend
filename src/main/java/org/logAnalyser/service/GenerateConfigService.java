@@ -1,5 +1,7 @@
 package org.logAnalyser.service;
 
+import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
 import org.logAnalyser.model.ConfWriteModel;
 import org.logAnalyser.model.MatchAttributes;
@@ -14,6 +16,8 @@ public class GenerateConfigService {
     private static final List<String> AttributeSet = Arrays.asList("timestamp","log_level","pid","thread",
             "class","message");
 
+
+    private static final String TIMESTAMP_FORMAT = "yyyy-MM-dd HH:mm:ss.SSS";
 
 
     @Value("${elasticSearch.cluster.url}")
@@ -52,14 +56,35 @@ public class GenerateConfigService {
         currentWrittenContext.append("filter {\n")
                 .append("  grok {\n")
                 .append("    match => { \"message\" => \"").append(generateMatchParsing(writeModel))
-                //%{TIMESTAMP_ISO8601:timestamp} +%{LOGLEVEL:log_level} +%{NUMBER:pid} --- \\[%{DATA:thread}\\] %{DATA:class} +: %{GREEDYDATA:message}\" }\n")
                 .append(" }\n").append(" }\n");
+         addDateParsing(currentWrittenContext,writeModel);
          buildMutateFeatures(currentWrittenContext,writeModel);
          currentWrittenContext.append(" }\n");
         }
 
+        private void addDateParsing(StringBuilder currentWrittenContext, ConfWriteModel writeModel) {
+            if ("timestamp".equalsIgnoreCase(checkIfTimeStampPresent(writeModel.getMatchAttributes()))) {
+                currentWrittenContext.append("  date {\n").
+                        append("    match => [\"").append("timestamp").append("\"").append(", ").append("\"").append(TIMESTAMP_FORMAT).append("\"]\n").
+                        append("    timezone => ").append("\"").append("UTC").append("\"").
+                        append("    target => ").append("\"").append("timestamp").append("\"")
+                        .append("  }\n");
+            }
+        }
 
-        private StringBuilder generateMatchParsing(ConfWriteModel confWriteModel){
+    private String checkIfTimeStampPresent(List<MatchAttributes> matchAttributes) {
+        if(null!=matchAttributes && !matchAttributes.isEmpty()){
+            for(MatchAttributes attributes: matchAttributes){
+                if("TIMESTAMP_ISO8601".equalsIgnoreCase(attributes.getType())){
+                    return "timestamp";
+                }
+            }
+        }
+        return "";
+    }
+
+
+    private StringBuilder generateMatchParsing(ConfWriteModel confWriteModel){
             StringBuilder matchContext =  new StringBuilder();
             List<MatchAttributes> matchAttributes = confWriteModel.getMatchAttributes();
             matchAttributes.sort(Comparator.comparingInt(MatchAttributes::getPosition));
@@ -80,7 +105,7 @@ public class GenerateConfigService {
                     matchContext.append(transformSpecialCharacters(attributeObject.getPrefix()));
                 }
                 matchContext.append("%{").append(attributeObject.getType()).append(":").
-                        append(attributeObject.getField()).append("}");
+                        append("TIMESTAMP_ISO8601".equalsIgnoreCase(attributeObject.getType())?"timestamp":attributeObject.getField()).append("}");
                 if(null!=attributeObject.getSuffix()){
                     matchContext.append(transformSpecialCharacters(attributeObject.getSuffix()));
                 }
@@ -93,7 +118,6 @@ public class GenerateConfigService {
         private void buildMutateFeatures(StringBuilder currentWrittenContext,ConfWriteModel writeModel){
             currentWrittenContext.append("  mutate {\n")
                     .append("    add_field => { \"microservice\" => \"%{type}\" }\n");
-                    //.append("}\n\n");
             if(null!= writeModel.getFilterableAttributes() && !writeModel.getFilterableAttributes().isEmpty()){
                 List<String> removableFields = AttributeSet.stream().
                         filter(attribute->!writeModel.getFilterableAttributes().contains(attribute)).toList();
@@ -125,16 +149,15 @@ public class GenerateConfigService {
 
     private String transformSpecialCharacters(String input) {
         if (input == null || input.isEmpty()) {
-            return input; // Return as is if the input is null or empty
+            return input;
         }
 
         StringBuilder result = new StringBuilder();
         for (char ch : input.toCharArray()) {
-            // If the character is a special character, append a backslash before it
             if (!Character.isLetterOrDigit(ch)) {
-                result.append('\\');  // Append backslash before the special character
+                result.append('\\');
             }
-            result.append(ch);  // Append the character itself
+            result.append(ch);
         }
 
         return result.toString();
